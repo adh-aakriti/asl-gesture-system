@@ -8,12 +8,13 @@ from mediapipe.tasks.python import vision
 
 # ====== CONFIG ======
 DATA_DIR = "data_custom"
-labels = ["yes", "no", "wait", "help", "thank_you"]
+labels = ["yes", "no", "wait", "help", "thank_you", "stop", "emergency"]
 
+# Create folders
 for label in labels:
     os.makedirs(os.path.join(DATA_DIR, label), exist_ok=True)
 
-# Load model
+# Load MediaPipe model
 base_options = python.BaseOptions(model_asset_path='hand_landmarker.task')
 options = vision.HandLandmarkerOptions(
     base_options=base_options,
@@ -24,15 +25,17 @@ detector = vision.HandLandmarker.create_from_options(options)
 cap = cv2.VideoCapture(0)
 
 current_label = "yes"
+flat_landmarks = None  # IMPORTANT: avoid undefined variable error
 
-print("\nPress keys to switch labels:")
+print("\nControls:")
 print("1 = yes | 2 = no | 3 = wait | 4 = help | 5 = thank_you")
-print("Press 's' to save sample | 'q' to quit\n")
+print("6 = stop | 7 = emergency")
+print("s = save sample | q = quit\n")
 
 while True:
     ret, frame = cap.read()
     if not ret:
-        break
+        continue  # safer than break
 
     frame = cv2.flip(frame, 1)
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -43,6 +46,8 @@ while True:
     )
 
     result = detector.detect(mp_image)
+
+    flat_landmarks = None  # reset every frame
 
     if result.hand_landmarks:
         for hand_landmarks in result.hand_landmarks:
@@ -80,16 +85,20 @@ while True:
     elif key == ord('3'): current_label = "wait"
     elif key == ord('4'): current_label = "help"
     elif key == ord('5'): current_label = "thank_you"
+    elif key == ord('6'): current_label = "stop"
+    elif key == ord('7'): current_label = "emergency"
 
     # Save sample
     elif key == ord('s'):
-        if result.hand_landmarks:
+        if flat_landmarks is not None:
             file_name = f"{int(time.time() * 1000)}.npy"
             file_path = os.path.join(DATA_DIR, current_label, file_name)
 
             np.save(file_path, flat_landmarks)
 
             print(f"Saved {current_label} sample")
+        else:
+            print("No hand detected — not saved")
 
     elif key == ord('q'):
         break

@@ -39,7 +39,7 @@ if not os.path.exists(MODEL_FILE):
 # -----------------------
 # LOAD MODEL
 # -----------------------
-model = joblib.load("model_custom.pkl")
+model = joblib.load("model_single_extended.pkl")
 
 # -----------------------
 # MEDIAPIPE SETUP

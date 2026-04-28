@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 import joblib
 
-DATA_DIR = "data_custom"  # baseline dataset
+DATA_DIR = "data_single_extended"  # baseline dataset
 
 X = []
 y = []
@@ -28,6 +28,6 @@ print("Data shape:", X.shape)
 model = RandomForestClassifier()
 model.fit(X, y)
 
-joblib.dump(model, "model_custom.pkl")
+joblib.dump(model, "model_single_extended.pkl")
 
 print("Model trained and saved!")
