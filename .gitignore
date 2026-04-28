@@ -1,0 +1,9 @@
+asl/
+__pycache__/
+*.pyc
+data_custom/
+data_single/
+*.zip
+.DS_Store
+*.pkl
+*.task
