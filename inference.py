@@ -82,7 +82,15 @@ display_text = ""
 current_gesture = None
 gesture_start_time = None
 gesture_spoken = False
-HOLD_TIME_SECONDS = 1.0  # Time to hold gesture before speaking
+HOLD_TIME_SECONDS = 0.7  # Time to hold gesture before speaking (reduced from 1.0)
+GESTURE_CHANGE_DEBOUNCE = 0.5  # Time to wait before resetting if gesture changes
+
+# Track potential gesture changes with debouncing
+last_gesture = None
+gesture_change_time = None
+
+# Keep track of spoken words to display sentences
+spoken_words = []  # List of (word, timestamp) tuples
 
 # -----------------------
 # WEBCAM
@@ -132,24 +140,48 @@ while True:
                 display_text = ""
 
             # -----------------------
-            # AUTO-SPEAK WITH HOLD TIME
+            # AUTO-SPEAK WITH HOLD TIME (WITH DEBOUNCING)
             # -----------------------
             if display_text and history.count(final_prediction) >= 5:
-                if current_gesture != display_text:
-                    # New gesture detected
-                    current_gesture = display_text
-                    gesture_start_time = time.time()
-                    gesture_spoken = False
-                else:
-                    # Same gesture, check hold time
-                    hold_duration = time.time() - gesture_start_time
+                # Gesture detected
+                if display_text != last_gesture:
+                    # Gesture changed - check debounce timer
+                    if gesture_change_time is None:
+                        gesture_change_time = time.time()
                     
-                    if hold_duration >= HOLD_TIME_SECONDS and not gesture_spoken:
-                        # Gesture held long enough, speak it
-                        speak_async(display_text)
-                        gesture_spoken = True
+                    time_since_change = time.time() - gesture_change_time
+                    
+                    if time_since_change < GESTURE_CHANGE_DEBOUNCE:
+                        # Still within debounce window - might switch back
+                        # Keep the old gesture state
+                        pass
+                    else:
+                        # Debounce time elapsed, this is a real gesture change
+                        last_gesture = display_text
+                        current_gesture = display_text
+                        gesture_start_time = time.time()
+                        gesture_spoken = False
+                        gesture_change_time = None
+                else:
+                    # Same gesture as before (or within debounce of a brief flicker)
+                    if current_gesture != display_text:
+                        current_gesture = display_text
+                        gesture_start_time = time.time()
+                        gesture_spoken = False
+                        gesture_change_time = None
+                    else:
+                        # Continue with same gesture, check hold time
+                        hold_duration = time.time() - gesture_start_time
+                        
+                        if hold_duration >= HOLD_TIME_SECONDS and not gesture_spoken:
+                            # Gesture held long enough, speak it
+                            speak_async(display_text)
+                            gesture_spoken = True
+                            spoken_words.append((display_text, time.time()))
             else:
                 # No valid gesture detected
+                last_gesture = None
+                gesture_change_time = None
                 current_gesture = None
                 gesture_start_time = None
                 gesture_spoken = False
@@ -162,10 +194,16 @@ while True:
     # black bar
     cv2.rectangle(frame, (0, h - 80), (w, h), (0, 0, 0), -1)
 
-    # subtitle text
+    # Display spoken words history (last 5 words, or remove after 3 seconds)
+    current_time = time.time()
+    active_words = [word for word, ts in spoken_words if current_time - ts < 10.0]
+    if len(active_words) > 5:
+        active_words = active_words[-5:]  # Keep only last 5 words
+    
+    sentence_text = " ".join(active_words)
     cv2.putText(
         frame,
-        display_text.upper(),
+        sentence_text.upper(),
         (50, h - 30),
         cv2.FONT_HERSHEY_SIMPLEX,
         1.5,
@@ -173,27 +211,28 @@ while True:
         3
     )
 
-    # Show hold progress
+    # Show hold progress for current gesture (at top)
     if current_gesture and gesture_start_time and not gesture_spoken:
         hold_duration = time.time() - gesture_start_time
         progress = min(hold_duration / HOLD_TIME_SECONDS, 1.0)
         cv2.putText(
             frame,
-            f"Holding: {progress:.0%}",
+            f"Holding '{current_gesture}': {progress:.0%}",
             (50, 50),
             cv2.FONT_HERSHEY_SIMPLEX,
-            1.0,
+            0.8,
             (0, 255, 0),
             2
         )
-    elif gesture_spoken:
+    elif display_text and not gesture_spoken:
+        # Show what gesture is detected but not yet committed
         cv2.putText(
             frame,
-            "Spoken!",
+            f"Detected: {display_text}",
             (50, 50),
             cv2.FONT_HERSHEY_SIMPLEX,
-            1.0,
-            (0, 255, 0),
+            0.8,
+            (100, 100, 255),
             2
         )
 
@@ -214,12 +253,19 @@ while True:
         if display_text and not gesture_spoken:
             speak_async(display_text)
             gesture_spoken = True
+            spoken_words.append((display_text, time.time()))
     
     # reset gesture tracking (press 'r')
     elif key == ord('r'):
         current_gesture = None
         gesture_start_time = None
         gesture_spoken = False
+        last_gesture = None
+        gesture_change_time = None
+    
+    # clear sentence history (press 'c')
+    elif key == ord('c'):
+        spoken_words = []
 
 cap.release()
 cv2.destroyAllWindows()
