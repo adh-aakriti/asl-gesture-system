@@ -2,7 +2,7 @@ import cv2
 import mediapipe as mp
 import os
 import numpy as np
-
+import time
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
@@ -23,8 +23,7 @@ detector = vision.HandLandmarker.create_from_options(options)
 
 cap = cv2.VideoCapture(0)
 
-current_label = "yes"  # default label
-counter = 0
+current_label = "yes"
 
 print("\nPress keys to switch labels:")
 print("1 = yes | 2 = no | 3 = wait | 4 = help | 5 = thank_you")
@@ -56,13 +55,19 @@ while True:
                 cv2.circle(frame, (cx, cy), 5, (0, 255, 0), -1)
                 landmarks.append([lm.x, lm.y, lm.z])
 
-            # Flatten for saving
             flat_landmarks = np.array(landmarks).flatten()
+
+    # -----------------------
+    # COUNT FILES (REAL COUNT)
+    # -----------------------
+    current_folder = os.path.join(DATA_DIR, current_label)
+    count = len(os.listdir(current_folder))
 
     # Display label + count
     cv2.putText(frame, f"Label: {current_label}", (10, 30),
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-    cv2.putText(frame, f"Saved: {counter}", (10, 70),
+
+    cv2.putText(frame, f"Saved: {count}", (10, 70),
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
     cv2.imshow("Collect Data", frame)
@@ -79,10 +84,12 @@ while True:
     # Save sample
     elif key == ord('s'):
         if result.hand_landmarks:
-            file_path = os.path.join(DATA_DIR, current_label, f"{counter}.npy")
+            file_name = f"{int(time.time() * 1000)}.npy"
+            file_path = os.path.join(DATA_DIR, current_label, file_name)
+
             np.save(file_path, flat_landmarks)
-            counter += 1
-            print(f"Saved {file_path}")
+
+            print(f"Saved {current_label} sample")
 
     elif key == ord('q'):
         break

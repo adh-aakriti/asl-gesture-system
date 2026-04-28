@@ -3,12 +3,11 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 import joblib
 
-DATA_DIR = "data_custom"
+DATA_DIR = "data_custom"  # baseline dataset
 
 X = []
 y = []
 
-# Load data
 for label in os.listdir(DATA_DIR):
     label_path = os.path.join(DATA_DIR, label)
 
@@ -26,11 +25,9 @@ y = np.array(y)
 
 print("Data shape:", X.shape)
 
-# Train model
 model = RandomForestClassifier()
 model.fit(X, y)
 
-# Save model
-joblib.dump(model, "model.pkl")
+joblib.dump(model, "model_custom.pkl")
 
 print("Model trained and saved!")

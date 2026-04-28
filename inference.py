@@ -10,7 +10,7 @@ from mediapipe.tasks.python import vision
 # -----------------------
 # LOAD MODEL
 # -----------------------
-model = joblib.load("model.pkl")
+model = joblib.load("model_custom.pkl")
 
 # -----------------------
 # MEDIAPIPE SETUP
