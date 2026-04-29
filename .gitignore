@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 data_custom/
 data_single/
+data_single_extended/
 *.zip
 .DS_Store
 *.pkl
